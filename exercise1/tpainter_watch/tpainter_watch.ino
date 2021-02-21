@@ -19,13 +19,26 @@ uint8_t hours;
 uint8_t minutes;
 uint8_t seconds;
 
+// DISPLAY VARS
 uint8_t display_hours;
 uint8_t display_minutes;
 uint8_t display_seconds;
 uint8_t minute_passed;
+uint8_t new_seconds;
 
-int x;
-int y;
+bool update_title;
+bool update_hours;
+bool update_minutes;
+bool update_seconds;
+
+// ANALOG VARS
+// all start at 60 because that is the center of the clock
+int sx = 60;
+int sy = 60;
+int mx = 60;
+int my = 60;
+int hx = 60;
+int hy = 60;
 int second_hand = 24;
 int minute_hand = 24;
 int hour_hand = 16;
@@ -66,7 +79,7 @@ void setup() {
 
 void loop() {
   
-  delay(200);
+  delay(100);
   
   // check for whether the button is pressed
   int unpushed = digitalRead(BUTTON);
@@ -75,8 +88,20 @@ void loop() {
      //update draw states based on whether the button is pushed
      if (draw_state == 1) {
       draw_state = 2;
+
+      //set all the time states to be updated
+      update_title = true;
+      update_seconds = true;
+      update_minutes = true;
+      update_hours = true;
      } else if (draw_state == 3) {
       draw_state = 0;
+      
+      //set all the time states to be updated
+      update_title = true;
+      update_seconds = true;
+      update_minutes = true;
+      update_hours = true;
      }
      
   }else{ 
@@ -200,6 +225,12 @@ void get_universal_time() {
   
   //start timer to update
   time_since_update = millis();
+
+  // set watch display update vars to true
+  update_title = true;
+  update_hours = true;
+  update_minutes = true;
+  update_seconds = true;
   
 }
 
@@ -211,18 +242,24 @@ void update_time(){
   }
 
   //set the display time variables
-  display_seconds = seconds + ((millis() - time_since_update)/1000) - minute_passed;
+  new_seconds = seconds + ((millis() - time_since_update)/1000) - minute_passed;
+  update_seconds = (new_seconds > display_seconds || update_title);
+  display_seconds = new_seconds;
+  
   if (display_seconds > 59) {
     display_seconds = 0;
     minute_passed = 60;
     display_minutes++;
+    update_minutes = true;
   }
   if (display_minutes > 59) {
     display_minutes = 0;
     display_hours++;
+    update_hours = true;
   }
-  if (display_hours > 12) {
+  if (display_hours > 24) {
     display_hours = 1;
+    update_hours = true;
   }
 }
 
@@ -237,38 +274,93 @@ void draw_watch() {
 
     // DIGITAL
     if (draw_state==0 || draw_state==1){
-      tft.fillScreen(TFT_BLUE);
-      tft.drawString("DIGITAL",0,0,1); 
-
-      sprintf(digital_display, "%d : %d : %d", display_hours, display_minutes, display_seconds);
-      tft.drawString(digital_display, 0, 10, 1);
-
+      draw_digital();
+      
     //ANALOG
-    }else if(draw_state==2 || draw_state==3){
-      tft.fillScreen(TFT_BLUE);
-      tft.drawString("ANALOG", 0, 0, 1); 
-
+    }else if(draw_state==2 || draw_state==3){ 
       draw_analog();
     }
 }
 
-void draw_analog() {
+void draw_digital() {
+
+  if (update_title){
+    tft.fillScreen(TFT_BLUE);
+    tft.drawString("DIGITAL",0,0,1);
+
+    //draw colons
+    tft.fillCircle(15, 12, 1, TFT_WHITE);
+    tft.fillCircle(15, 14, 1, TFT_WHITE);
+    tft.fillCircle(35, 12, 1, TFT_WHITE);
+    tft.fillCircle(35, 14, 1, TFT_WHITE);
+    
+    update_title = false;
+  }
+
+  if (update_hours) {
+    tft.fillRoundRect(0, 10, 10, 10, 0, TFT_BLUE); 
+    tft.drawNumber(display_hours, 0, 10, 1);
+    update_hours = false;
+  }
+  if (update_minutes) {
+    tft.fillRoundRect(20, 10, 10, 10, 0, TFT_BLUE); 
+    tft.drawNumber(display_minutes, 20, 10, 1);
+    update_minutes = false;
+  }
+  if (update_seconds) {
+    tft.fillRoundRect(40, 10, 15, 15, 0, TFT_BLUE); 
+    tft.drawNumber(display_seconds, 40, 10, 1);
+    update_seconds = false;
+  }
   
-  // draw seconds
-  y = (second_hand * cos(pi-(2*pi)/60 * display_seconds)) + center;
-  x = (second_hand * sin(pi-(2*pi)/60 * display_seconds)) + center;
-  tft.drawLine(center, center, x, y, TFT_WHITE);
 
-  // draw minutes
-  y = (minute_hand * cos(pi-(2*pi)/60 * display_minutes)) + center;
-  x = (minute_hand * sin(pi-(2*pi)/60 * display_minutes)) + center;
-  tft.drawLine(center, center, x, y, TFT_WHITE);
+}
 
-  // draw hours
-  y = (hour_hand * cos(pi-(2*pi)/12 * display_hours)) + center;
-  x = (hour_hand * sin(pi-(2*pi)/12 * display_hours)) + center;
-  tft.drawLine(center, center, x, y, TFT_WHITE);
+void draw_analog() {
 
-  // draw clock circle
-  tft.drawCircle(center, center, 30, TFT_WHITE);
+  // title screen
+  if (update_title){
+    tft.fillScreen(TFT_BLUE);
+    tft.drawString("ANALOG", 0, 0, 1);
+
+    // draw clock circle
+    tft.drawCircle(center, center, 30, TFT_WHITE);
+  }
+  
+  if (update_seconds) {
+    // draw seconds
+    tft.drawLine(center, center, sx, sy, TFT_BLUE); // use past var
+    sy = (second_hand * cos(pi-(2*pi)/60 * display_seconds)) + center;
+    sx = (second_hand * sin(pi-(2*pi)/60 * display_seconds)) + center;
+    tft.drawLine(center, center, sx, sy, TFT_WHITE);
+
+    update_seconds = false;
+    
+    // to account for the seconds hand erasing the other clock hands
+    // (since everything is drawn and redrawn)
+    // a buffer is added because of the pixelated lines
+    update_minutes = ((display_seconds - 10 < display_minutes && display_minutes < display_seconds) || update_title);
+    update_hours = ((display_seconds - 10 < display_hours && display_hours < display_seconds) || update_title);
+  }
+  if (update_minutes) {
+    // draw minutes
+    tft.drawLine(center, center, mx, my, TFT_BLUE); // use past var
+    my = (minute_hand * cos(pi-(2*pi)/60 * display_minutes)) + center;
+    mx = (minute_hand * sin(pi-(2*pi)/60 * display_minutes)) + center;
+    tft.drawLine(center, center, mx, my, TFT_WHITE);
+
+    update_minutes = false;
+  }
+  if (update_hours) {
+    // draw hours
+    tft.drawLine(center, center, hx, hy, TFT_BLUE); // use past var
+    hy = (hour_hand * cos(pi-(2*pi)/12 * display_hours)) + center;
+    hx = (hour_hand * sin(pi-(2*pi)/12 * display_hours)) + center;
+    tft.drawLine(center, center, hx, hy, TFT_WHITE);
+
+    update_hours = false;
+  }
+
+  update_title = false;
+  
 }
