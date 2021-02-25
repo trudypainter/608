@@ -78,6 +78,9 @@ The seconds hand essentially sweeps over and erases the minute and hours hands w
 To account for this, I added a check for when the hours and minutes values are near the seconds value. 
 Then, the program can update the hands and the hands don't get erased.
 
+I should also note, the hour hand had to be adjusted according to 2 factors. First, I used the modulo function to handle military time differences on analog. 
+Second, I added the offset of the amount of minutes passed to mirror an analog clock in real life.
+
 ![Basic trig for analog clock.](https://raw.githubusercontent.com/trudypainter/608/master/exercise1/tpainter_watch/trig.jpeg =100x20)
 
 ~~~
@@ -91,6 +94,9 @@ void draw_analog() {
     // draw clock circle
     tft.drawCircle(center, center, 30, TFT_WHITE);
   }
+
+  // use an adjusted hour value to account for military time and minutes passed
+  float adjusted_hour = fmod(display_hours, 12.0) + display_minutes/60.0;  
   
   if (update_seconds) {
     // draw seconds
@@ -105,7 +111,7 @@ void draw_analog() {
     // (since everything is drawn and redrawn)
     // a buffer is added because of the pixelated lines
     update_minutes = ((display_seconds - 10 < display_minutes && display_minutes < display_seconds) || update_title);
-    update_hours = ((display_seconds - 10 < display_hours && display_hours < display_seconds) || update_title);
+    update_hours = ((display_seconds - 10 < adjusted_hour*5 && adjusted_hour*5 < display_seconds) || update_title);
   }
   if (update_minutes) {
     // draw minutes
@@ -119,8 +125,8 @@ void draw_analog() {
   if (update_hours) {
     // draw hours
     tft.drawLine(center, center, hx, hy, TFT_BLUE); // use past var
-    hy = (hour_hand * cos(pi-(2*pi)/12 * display_hours)) + center;
-    hx = (hour_hand * sin(pi-(2*pi)/12 * display_hours)) + center;
+    hy = (hour_hand * cos(pi-(2*pi)/12 * adjusted_hour)) + center;
+    hx = (hour_hand * sin(pi-(2*pi)/12 * adjusted_hour)) + center;
     tft.drawLine(center, center, hx, hy, TFT_WHITE);
 
     update_hours = false;
@@ -254,7 +260,6 @@ All of my code for this project is below.
   char digital_display[1000];
   uint32_t time_since_update;
   
-  // UNIVERSAL TIME VARS
   uint8_t hours;
   uint8_t minutes;
   uint8_t seconds;
@@ -266,7 +271,6 @@ All of my code for this project is below.
   uint8_t minute_passed;
   uint8_t new_seconds;
   
-  // UPDATE VARS FOR SMOOTH GRAPHICS
   bool update_title;
   bool update_hours;
   bool update_minutes;
@@ -287,7 +291,7 @@ All of my code for this project is below.
   
   // NETWORK VARS
   char network[] = "116 berkshire floor 3";
-  char password[] = ".......";
+  char password[] = "....";
   const int RESPONSE_TIMEOUT = 6000; //ms to wait for response from host
   const int GETTING_PERIOD = 5000; //periodicity of getting a number fact.
   const uint16_t IN_BUFFER_SIZE = 1000; //size of buffer to hold HTTP request
@@ -553,6 +557,8 @@ All of my code for this project is below.
       tft.drawNumber(display_seconds, 40, 10, 1);
       update_seconds = false;
     }
+    
+  
   }
   
   void draw_analog() {
@@ -565,6 +571,9 @@ All of my code for this project is below.
       // draw clock circle
       tft.drawCircle(center, center, 30, TFT_WHITE);
     }
+  
+    // use an adjusted hour value to account for military time and minutes passed
+    float adjusted_hour = fmod(display_hours, 12.0) + display_minutes/60.0;  
     
     if (update_seconds) {
       // draw seconds
@@ -579,7 +588,7 @@ All of my code for this project is below.
       // (since everything is drawn and redrawn)
       // a buffer is added because of the pixelated lines
       update_minutes = ((display_seconds - 10 < display_minutes && display_minutes < display_seconds) || update_title);
-      update_hours = ((display_seconds - 10 < display_hours && display_hours < display_seconds) || update_title);
+      update_hours = ((display_seconds - 10 < adjusted_hour*5 && adjusted_hour*5 < display_seconds) || update_title);
     }
     if (update_minutes) {
       // draw minutes
@@ -593,8 +602,8 @@ All of my code for this project is below.
     if (update_hours) {
       // draw hours
       tft.drawLine(center, center, hx, hy, TFT_BLUE); // use past var
-      hy = (hour_hand * cos(pi-(2*pi)/12 * display_hours)) + center;
-      hx = (hour_hand * sin(pi-(2*pi)/12 * display_hours)) + center;
+      hy = (hour_hand * cos(pi-(2*pi)/12 * adjusted_hour)) + center;
+      hx = (hour_hand * sin(pi-(2*pi)/12 * adjusted_hour)) + center;
       tft.drawLine(center, center, hx, hy, TFT_WHITE);
   
       update_hours = false;
@@ -602,7 +611,7 @@ All of my code for this project is below.
   
     update_title = false;
     
-  }  
+  } 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 <style class="fallback">body{visibility:hidden}</style><script>markdeepOptions={tocStyle:'medium'};</script>

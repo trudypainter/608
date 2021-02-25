@@ -326,6 +326,9 @@ void draw_analog() {
     // draw clock circle
     tft.drawCircle(center, center, 30, TFT_WHITE);
   }
+
+  // use an adjusted hour value to account for military time and minutes passed
+  float adjusted_hour = fmod(display_hours, 12.0) + display_minutes/60.0;  
   
   if (update_seconds) {
     // draw seconds
@@ -340,7 +343,7 @@ void draw_analog() {
     // (since everything is drawn and redrawn)
     // a buffer is added because of the pixelated lines
     update_minutes = ((display_seconds - 10 < display_minutes && display_minutes < display_seconds) || update_title);
-    update_hours = ((display_seconds - 10 < display_hours && display_hours < display_seconds) || update_title);
+    update_hours = ((display_seconds - 10 < adjusted_hour*5 && adjusted_hour*5 < display_seconds) || update_title);
   }
   if (update_minutes) {
     // draw minutes
@@ -354,8 +357,8 @@ void draw_analog() {
   if (update_hours) {
     // draw hours
     tft.drawLine(center, center, hx, hy, TFT_BLUE); // use past var
-    hy = (hour_hand * cos(pi-(2*pi)/12 * display_hours)) + center;
-    hx = (hour_hand * sin(pi-(2*pi)/12 * display_hours)) + center;
+    hy = (hour_hand * cos(pi-(2*pi)/12 * adjusted_hour)) + center;
+    hx = (hour_hand * sin(pi-(2*pi)/12 * adjusted_hour)) + center;
     tft.drawLine(center, center, hx, hy, TFT_WHITE);
 
     update_hours = false;
